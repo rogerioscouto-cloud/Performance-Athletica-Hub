@@ -2,16 +2,19 @@ import { SupabaseRepository } from "@/data/repositories/base/supabase-repository
 import type { Recommendation } from "@/domain/alerts/types";
 
 export class RecommendationsRepository extends SupabaseRepository {
-  async insert(userId: string, date: string, recommendations: Recommendation[]) {
-    if (recommendations.length === 0) return;
+  async insert(userId: string, date: string, recs: Recommendation[]) {
     const db = await this.db();
-    const { error } = await db.from("recommendations").insert(
-      recommendations.map((recommendation) => ({
-        user_id: userId,
-        date,
-        message: recommendation.message
-      }))
-    );
-    if (error) throw new Error(error.message);
+
+    const payload = recs.map((rec) => ({
+      user_id: userId,
+      date,
+      message: rec.message
+    }));
+
+    const { error } = await (db as any).from("recommendations").insert(payload);
+
+    if (error) {
+      throw new Error(`Erro ao salvar recomendações: ${error.message}`);
+    }
   }
 }
