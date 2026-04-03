@@ -40,15 +40,9 @@ export class WorkoutRepository extends SupabaseRepository {
       .order("date", { ascending: false });
 
     if (error) {
-      throw new Error(`Erro ao listar treinos: ${error.message}`);
+      throw new Error(error.message);
     }
 
-    return data;
-  }
-}
-      .eq("user_id", userId)
-      .order("date", { ascending: false });
-    if (error) throw new Error(error.message);
     return (data ?? []) as Array<Record<string, any>>;
   }
 }
