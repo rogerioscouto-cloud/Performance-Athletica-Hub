@@ -1,5 +1,4 @@
 import { SupabaseRepository } from "@/data/repositories/base/supabase-repository";
-import type { ReadinessStatus } from "@/types";
 
 export class ReadinessRepository extends SupabaseRepository {
   async create(input: {
@@ -10,10 +9,11 @@ export class ReadinessRepository extends SupabaseRepository {
     fatigueScore: number;
     sorenessScore?: number | null;
     readinessScore: number;
-    status: ReadinessStatus;
+    status: "GREEN" | "YELLOW" | "RED";
   }) {
     const db = await this.db();
-    const { error } = await db.from("readiness_logs").insert({
+
+    const { error } = await (db as any).from("readiness_logs").insert({
       user_id: input.userId,
       date: input.date,
       resting_hr: input.restingHr,
@@ -23,17 +23,27 @@ export class ReadinessRepository extends SupabaseRepository {
       readiness_score: input.readinessScore,
       status: input.status
     });
-    if (error) throw new Error(`Erro ao salvar readiness: ${error.message}`);
+
+    if (error) {
+      throw new Error(`Erro ao salvar readiness: ${error.message}`);
+    }
   }
 
-  async list(userId: string) {
+  async getLatest(userId: string) {
     const db = await this.db();
-    const { data, error } = await db
+
+    const { data, error } = await (db as any)
       .from("readiness_logs")
       .select("*")
       .eq("user_id", userId)
-      .order("date", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Array<Record<string, unknown>>;
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Erro ao buscar readiness: ${error.message}`);
+    }
+
+    return data;
   }
 }
