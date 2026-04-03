@@ -22,7 +22,7 @@ export class StrengthRepository extends SupabaseRepository {
         user_id: input.userId,
         date: input.date,
         total_volume: input.totalVolume,
-        notes: input.notes
+        notes: input.notes ?? null
       })
       .select()
       .single();
@@ -31,7 +31,7 @@ export class StrengthRepository extends SupabaseRepository {
       throw new Error(`Erro ao criar sessão: ${error.message}`);
     }
 
-    return data;
+    return data as Record<string, any>;
   }
 
   async insertExercises(sessionId: string, exercises: StrengthExerciseInsert[]) {
@@ -59,12 +59,7 @@ export class StrengthRepository extends SupabaseRepository {
 
     const { data, error } = await (db as any)
       .from("strength_sessions")
-      .select(
-        `
-        *,
-        strength_exercises (*)
-      `
-      )
+      .select("*, strength_exercises(*)")
       .eq("user_id", userId)
       .order("date", { ascending: false });
 
@@ -72,11 +67,6 @@ export class StrengthRepository extends SupabaseRepository {
       throw new Error(`Erro ao listar sessões: ${error.message}`);
     }
 
-    return data;
-  }
-}
-      .order("date", { ascending: false });
-    if (error) throw new Error(error.message);
     return (data ?? []) as Array<Record<string, any>>;
   }
 }
