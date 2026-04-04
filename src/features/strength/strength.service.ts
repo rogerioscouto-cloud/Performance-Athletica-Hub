@@ -1,24 +1,23 @@
-import { calculateStrengthMetrics } from "@/domain/strength/calculate-strength";
-import { StrengthRepository } from "@/data/repositories/strength.repository";
-import { requireUser } from "@/lib/auth/session";
+import { createStrengthSession } from "@/data/repositories/strength.repository";
 
-export class StrengthService {
-  private repo = new StrengthRepository();
+type CreateStrengthSessionInput = {
+  userId: string;
+  date: string;
+  durationMinutes: number;
+  caloriesBurned?: number | null;
+  sessionType?: string;
+  notes?: string;
+};
 
-  async createSession(input: { date: string; exercises: Array<{ name: string; sets: number; reps: number; loadKg?: number | null }> }) {
-    const user = await requireUser();
-    const metrics = calculateStrengthMetrics(input);
-    const session = await this.repo.createSession({
-      userId: user.id,
-      date: input.date,
-      totalVolume: metrics.totalVolume
-    });
-    await this.repo.insertExercises(session.id, input.exercises);
-    return metrics;
-  }
-
-  async list() {
-    const user = await requireUser();
-    return this.repo.list(user.id);
-  }
+export async function createStrengthSessionService(
+  input: CreateStrengthSessionInput
+) {
+  return createStrengthSession({
+    user_id: input.userId,
+    date: input.date,
+    duration_minutes: input.durationMinutes,
+    calories_burned: input.caloriesBurned ?? null,
+    session_type: input.sessionType ?? null,
+    notes: input.notes ?? null,
+  });
 }
