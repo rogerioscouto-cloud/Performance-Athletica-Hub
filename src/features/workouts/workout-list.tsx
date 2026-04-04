@@ -10,7 +10,7 @@ type Workout = {
 };
 
 type WorkoutListProps = {
-  workouts: Workout[];
+  workouts?: Workout[];
 };
 
 function formatDate(date: string): string {
@@ -44,8 +44,8 @@ function calculatePace(distanceKm: number, durationSec: number): string {
   )}/km`;
 }
 
-export function WorkoutList({ workouts }: WorkoutListProps) {
-  if (!workouts?.length) {
+export function WorkoutList({ workouts = [] }: WorkoutListProps) {
+  if (!workouts.length) {
     return (
       <div className="rounded-2xl border border-dashed p-6 text-sm text-gray-600">
         Nenhuma corrida registrada ainda.
