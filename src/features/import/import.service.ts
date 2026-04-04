@@ -1,5 +1,5 @@
-import type { ParsedWorkout } from "@/domain/imports/types";
 import { WorkoutService } from "@/features/workouts/workout.service";
+import type { ParsedWorkout } from "@/domain/imports/types";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,7 +10,7 @@ export class ImportService {
     const user = await requireUser();
     const db = await createClient();
 
-    const { data: importRecord, error } = await db
+    const { data: importRecord, error } = await (db as any)
       .from("imports")
       .insert({
         user_id: user.id,
@@ -18,22 +18,44 @@ export class ImportService {
         status: "PENDING",
         rows_count: data.length
       })
-      .select("*")
+      .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(`Erro ao criar registro de importação: ${error.message}`);
+    }
 
     try {
       for (const row of data) {
-        await this.workoutService.createRun(row);
+        await this.workoutService.createRun({
+          date: row.date,
+          distanceKm: row.distanceKm,
+          durationSec: row.durationSec,
+          avgHeartRate: row.avgHeartRate ?? null
+        });
       }
 
-      await db.from("imports").update({ status: "PROCESSED" }).eq("id", importRecord.id);
-      return { ok: true, count: data.length };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Falha na importação";
-      await db.from("imports").update({ status: "FAILED", error: message }).eq("id", importRecord.id);
-      throw error;
+      const { error: updateError } = await (db as any)
+        .from("imports")
+        .update({ status: "PROCESSED" })
+        .eq("id", importRecord.id);
+
+      if (updateError) {
+        throw new Error(`Erro ao finalizar importação: ${updateError.message}`);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha desconhecida na importação.";
+
+      await (db as any)
+        .from("imports")
+        .update({
+          status: "FAILED",
+          error: message
+        })
+        .eq("id", importRecord.id);
+
+      throw err;
     }
   }
 }
