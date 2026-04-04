@@ -46,4 +46,20 @@ export class ReadinessRepository extends SupabaseRepository {
 
     return data;
   }
+
+  async list(userId: string) {
+    const db = await this.db();
+
+    const { data, error } = await (db as any)
+      .from("readiness_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("date", { ascending: false });
+
+    if (error) {
+      throw new Error(`Erro ao listar readiness logs: ${error.message}`);
+    }
+
+    return (data ?? []) as Array<Record<string, any>>;
+  }
 }
