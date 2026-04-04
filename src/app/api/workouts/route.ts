@@ -1,32 +1,54 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { WorkoutService } from "@/features/workouts/workout.service";
+import { createWorkout } from "@/features/workouts/workout.service";
 
 const schema = z.object({
-  date: z.string(),
-  distanceKm: z.number(),
-  durationSec: z.number(),
-  avgHeartRate: z.number().optional().nullable()
+  date: z.string().min(1, "Informe a data."),
+  distanceKm: z.number().positive("Informe uma distância válida."),
+  durationSec: z.number().int().positive("Informe uma duração válida."),
+  avgHr: z.number().positive().nullable().optional(),
 });
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const parsed = schema.parse(body);
-    const service = new WorkoutService();
-    return NextResponse.json(await service.createRun(parsed));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha ao salvar treino.";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-}
 
-export async function GET() {
-  try {
-    const service = new WorkoutService();
-    return NextResponse.json(await service.list());
+    const parsed = schema.safeParse(body);
+
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: firstIssue?.message || "Dados inválidos.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await createWorkout({
+      date: parsed.data.date,
+      distanceKm: parsed.data.distanceKm,
+      durationSec: parsed.data.durationSec,
+      avgHr: parsed.data.avgHr ?? null,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: "Treino salvo com sucesso.",
+      data: result,
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha ao listar treinos.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro interno ao salvar treino.",
+      },
+      { status: 500 }
+    );
   }
 }
