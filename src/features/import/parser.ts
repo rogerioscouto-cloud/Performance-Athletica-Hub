@@ -7,9 +7,30 @@ export function parseXlsx(file: File): Promise<RawRow[]> {
 
     reader.onload = (event) => {
       try {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const result = event.target?.result;
+
+        if (!(result instanceof ArrayBuffer)) {
+          reject(new Error("Falha ao ler o arquivo XLSX."));
+          return;
+        }
+
+        const data = new Uint8Array(result);
         const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+        const firstSheetName = workbook.SheetNames[0];
+
+        if (!firstSheetName) {
+          reject(new Error("Arquivo XLSX sem planilhas."));
+          return;
+        }
+
+        const sheet = workbook.Sheets[firstSheetName];
+
+        if (!sheet) {
+          reject(new Error("Não foi possível acessar a primeira planilha."));
+          return;
+        }
+
         const json = XLSX.utils.sheet_to_json(sheet);
         resolve(json as RawRow[]);
       } catch (error) {
@@ -17,7 +38,10 @@ export function parseXlsx(file: File): Promise<RawRow[]> {
       }
     };
 
-    reader.onerror = reject;
+    reader.onerror = () => {
+      reject(new Error("Erro ao ler o arquivo."));
+    };
+
     reader.readAsArrayBuffer(file);
   });
 }
