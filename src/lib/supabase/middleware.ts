@@ -1,12 +1,35 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+
 import { getSupabasePublicEnv } from "@/lib/supabase/config";
 import type { Database } from "@/lib/supabase/types";
 
-const protectedPrefixes = ["/dashboard", "/readiness", "/workouts", "/strength", "/import", "/alerts", "/adaptive"];
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: CookieOptions;
+};
+
+const AUTH_ROUTES = ["/login", "/signup"];
+const PROTECTED_PREFIXES = ["/app", "/dashboard", "/readiness", "/workouts", "/strength"];
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
+function isAuthRoute(pathname: string) {
+  return AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+}
 
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({
+    request
+  });
+
   const { url, anonKey } = getSupabasePublicEnv();
 
   const supabase = createServerClient<Database>(url, anonKey, {
@@ -14,7 +37,7 @@ export async function updateSession(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: CookieToSet[]) {
         cookiesToSet.forEach(({ name, value, options }) => {
           request.cookies.set(name, value);
           response.cookies.set(name, value, options);
@@ -23,12 +46,22 @@ export async function updateSession(request: NextRequest) {
     }
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
-  const isProtected = protectedPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix));
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-  if (!user && isProtected) {
+  const pathname = request.nextUrl.pathname;
+
+  if (!user && isProtectedPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
+    redirectUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (user && isAuthRoute(pathname)) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/";
     return NextResponse.redirect(redirectUrl);
   }
 
