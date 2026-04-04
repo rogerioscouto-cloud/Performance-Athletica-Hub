@@ -1,72 +1,42 @@
-import { SupabaseRepository } from "@/data/repositories/base/supabase-repository";
+import { createClient } from "@/lib/supabase/server";
 
-type StrengthExerciseInsert = {
-  name: string;
-  sets: number;
-  reps: number;
-  loadKg?: number | null;
+type CreateStrengthSessionRow = {
+  user_id: string;
+  date: string;
+  duration_minutes: number;
+  calories_burned: number | null;
+  session_type: string | null;
+  notes: string | null;
 };
 
-export class StrengthRepository extends SupabaseRepository {
-  async createSession(input: {
-    userId: string;
-    date: string;
-    totalVolume: number;
-    notes?: string | null;
-  }) {
-    const db = await this.db();
+export async function createStrengthSession(row: CreateStrengthSessionRow) {
+  const supabase = await createClient();
 
-    const { data, error } = await (db as any)
-      .from("strength_sessions")
-      .insert({
-        user_id: input.userId,
-        date: input.date,
-        total_volume: input.totalVolume,
-        notes: input.notes ?? null
-      })
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from("strength_sessions")
+    .insert(row)
+    .select()
+    .single();
 
-    if (error) {
-      throw new Error(`Erro ao criar sessão: ${error.message}`);
-    }
-
-    return data as Record<string, any>;
+  if (error) {
+    throw new Error(error.message || "Erro ao salvar sessão de força.");
   }
 
-  async insertExercises(sessionId: string, exercises: StrengthExerciseInsert[]) {
-    const db = await this.db();
+  return data;
+}
 
-    const payload = exercises.map((exercise) => ({
-      session_id: sessionId,
-      name: exercise.name,
-      sets: exercise.sets,
-      reps: exercise.reps,
-      load_kg: exercise.loadKg ?? null
-    }));
+export async function listStrengthSessions(userId: string) {
+  const supabase = await createClient();
 
-    const { error } = await (db as any)
-      .from("strength_exercises")
-      .insert(payload);
+  const { data, error } = await supabase
+    .from("strength_sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("date", { ascending: false });
 
-    if (error) {
-      throw new Error(`Erro ao salvar exercícios: ${error.message}`);
-    }
+  if (error) {
+    throw new Error(error.message || "Erro ao listar sessões de força.");
   }
 
-  async list(userId: string) {
-    const db = await this.db();
-
-    const { data, error } = await (db as any)
-      .from("strength_sessions")
-      .select("*, strength_exercises(*)")
-      .eq("user_id", userId)
-      .order("date", { ascending: false });
-
-    if (error) {
-      throw new Error(`Erro ao listar sessões: ${error.message}`);
-    }
-
-    return (data ?? []) as Array<Record<string, any>>;
-  }
+  return data ?? [];
 }
