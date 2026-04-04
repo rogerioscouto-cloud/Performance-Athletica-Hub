@@ -1,37 +1,67 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { StrengthService } from "@/features/strength/strength.service";
-
-const exerciseSchema = z.object({
-  name: z.string(),
-  sets: z.number(),
-  reps: z.number(),
-  loadKg: z.number().optional().nullable()
-});
-
-const schema = z.object({
-  date: z.string(),
-  exercises: z.array(exerciseSchema).min(1)
-});
+import { createClient } from "@/lib/supabase/server";
+import { strengthSchema } from "@/features/strength/strength.schema";
+import { createStrengthSessionService } from "@/features/strength/strength.service";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const parsed = schema.parse(body);
-    const service = new StrengthService();
-    return NextResponse.json(await service.createSession(parsed));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha ao salvar treino de força.";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-}
+    const supabase = await createClient();
 
-export async function GET() {
-  try {
-    const service = new StrengthService();
-    return NextResponse.json(await service.list());
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Usuário não autenticado.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+
+    const parsed = strengthSchema.safeParse(body);
+
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+
+      return NextResponse.json(
+        {
+          ok: false,
+          message: firstIssue?.message || "Dados inválidos.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await createStrengthSessionService({
+      userId: user.id,
+      date: parsed.data.date,
+      durationMinutes: parsed.data.durationMinutes,
+      caloriesBurned: parsed.data.caloriesBurned ?? null,
+      sessionType: parsed.data.sessionType,
+      notes: parsed.data.notes,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: "Sessão de força salva com sucesso.",
+      data: result,
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha ao listar treinos de força.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro interno ao salvar sessão.",
+      },
+      { status: 500 }
+    );
   }
 }
