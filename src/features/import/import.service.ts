@@ -1,11 +1,9 @@
-import { WorkoutService } from "@/features/workouts/workout.service";
+import { createWorkout } from "@/features/workouts/workout.service";
 import type { ParsedWorkout } from "@/domain/imports/types";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 export class ImportService {
-  private workoutService = new WorkoutService();
-
   async commit(data: ParsedWorkout[]) {
     const user = await requireUser();
     const db = await createClient();
@@ -16,7 +14,7 @@ export class ImportService {
         user_id: user.id,
         file_name: "manual_upload.xlsx",
         status: "PENDING",
-        rows_count: data.length
+        rows_count: data.length,
       })
       .select()
       .single();
@@ -27,11 +25,11 @@ export class ImportService {
 
     try {
       for (const row of data) {
-        await this.workoutService.createRun({
+        await createWorkout({
           date: row.date,
           distanceKm: row.distanceKm,
           durationSec: row.durationSec,
-          avgHeartRate: row.avgHeartRate ?? null
+          avgHr: row.avgHeartRate ?? null,
         });
       }
 
@@ -51,7 +49,7 @@ export class ImportService {
         .from("imports")
         .update({
           status: "FAILED",
-          error: message
+          error: message,
         })
         .eq("id", importRecord.id);
 
