@@ -14,7 +14,7 @@ export async function createStrengthSession(row: CreateStrengthSessionRow) {
 
   const { data, error } = await supabase
     .from("strength_sessions")
-    .insert(row)
+    .insert(row as never)
     .select()
     .single();
 
