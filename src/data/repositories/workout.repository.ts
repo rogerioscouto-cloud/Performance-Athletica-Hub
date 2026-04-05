@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 type CreateWorkoutRow = {
   user_id: string;
+  type: string;
   date: string;
   distance_km: number;
   duration_sec: number;
@@ -12,7 +13,7 @@ export async function createWorkout(row: CreateWorkoutRow) {
   const supabase = await createClient();
 
   const { data, error } = await (supabase as any)
-    .from("workout_logs") // 🔥 AQUI FOI CORRIGIDO
+    .from("workout_logs")
     .insert(row)
     .select()
     .single();
@@ -28,7 +29,7 @@ export async function listWorkouts(userId: string) {
   const supabase = await createClient();
 
   const { data, error } = await (supabase as any)
-    .from("workout_logs") // 🔥 AQUI TAMBÉM
+    .from("workout_logs")
     .select("*")
     .eq("user_id", userId)
     .order("date", { ascending: false });
