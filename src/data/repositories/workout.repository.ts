@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
 type CreateWorkoutRow = {
+  user_id: string;
   date: string;
   distance_km: number;
   duration_sec: number;
