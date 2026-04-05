@@ -8,7 +8,7 @@ type StrengthSession = {
 };
 
 type StrengthListProps = {
-  sessions: StrengthSession[];
+  sessions?: StrengthSession[];
 };
 
 function formatDate(date: string): string {
@@ -23,8 +23,8 @@ function formatDate(date: string): string {
   return parsed.toLocaleDateString("pt-BR");
 }
 
-export function StrengthList({ sessions }: StrengthListProps) {
-  if (!sessions?.length) {
+export function StrengthList({ sessions = [] }: StrengthListProps) {
+  if (!sessions.length) {
     return (
       <div className="rounded-2xl border border-dashed p-6 text-sm text-gray-600">
         Nenhuma sessão de força registrada ainda.
