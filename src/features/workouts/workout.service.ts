@@ -1,4 +1,5 @@
 import { createWorkout as createWorkoutRepo } from "@/data/repositories/workout.repository";
+import { requireUser } from "@/lib/auth/session";
 
 type CreateWorkoutInput = {
   date: string;
@@ -8,7 +9,10 @@ type CreateWorkoutInput = {
 };
 
 export async function createWorkout(input: CreateWorkoutInput) {
+  const user = await requireUser();
+
   return createWorkoutRepo({
+    user_id: user.id,
     date: input.date,
     distance_km: input.distanceKm,
     duration_sec: input.durationSec,
