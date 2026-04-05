@@ -1,48 +1,40 @@
-import { SupabaseRepository } from "@/data/repositories/base/supabase-repository";
+import { createClient } from "@/lib/supabase/server";
 
-export class WorkoutRepository extends SupabaseRepository {
-  async create(input: {
-    userId: string;
-    date: string;
-    distanceKm: number;
-    durationSec: number;
-    avgPace: number;
-    avgHr?: number | null;
-    trainingLoad: number;
-    efficiency: number;
-  }) {
-    const db = await this.db();
+type CreateWorkoutRow = {
+  date: string;
+  distance_km: number;
+  duration_sec: number;
+  avg_hr: number | null;
+};
 
-    const { error } = await (db as any).from("workout_logs").insert({
-      user_id: input.userId,
-      date: input.date,
-      type: "RUN",
-      distance_km: input.distanceKm,
-      duration_sec: input.durationSec,
-      avg_pace_sec_per_km: input.avgPace,
-      avg_hr: input.avgHr ?? null,
-      training_load: input.trainingLoad,
-      efficiency: input.efficiency
-    });
+export async function createWorkout(row: CreateWorkoutRow) {
+  const supabase = await createClient();
 
-    if (error) {
-      throw new Error(`Erro ao salvar treino: ${error.message}`);
-    }
+  const { data, error } = await (supabase as any)
+    .from("workouts")
+    .insert(row)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Erro ao salvar treino.");
   }
 
-  async list(userId: string) {
-    const db = await this.db();
+  return data;
+}
 
-    const { data, error } = await (db as any)
-      .from("workout_logs")
-      .select("*")
-      .eq("user_id", userId)
-      .order("date", { ascending: false });
+export async function listWorkouts(userId: string) {
+  const supabase = await createClient();
 
-    if (error) {
-      throw new Error(error.message);
-    }
+  const { data, error } = await (supabase as any)
+    .from("workouts")
+    .select("*")
+    .eq("user_id", userId)
+    .order("date", { ascending: false });
 
-    return (data ?? []) as Array<Record<string, any>>;
+  if (error) {
+    throw new Error(error.message || "Erro ao listar treinos.");
   }
+
+  return data ?? [];
 }
