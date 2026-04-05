@@ -13,6 +13,7 @@ export async function createWorkout(input: CreateWorkoutInput) {
 
   return createWorkoutRepo({
     user_id: user.id,
+    type: "RUN!",
     date: input.date,
     distance_km: input.distanceKm,
     duration_sec: input.durationSec,
