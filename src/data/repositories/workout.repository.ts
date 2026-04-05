@@ -12,7 +12,7 @@ export async function createWorkout(row: CreateWorkoutRow) {
   const supabase = await createClient();
 
   const { data, error } = await (supabase as any)
-    .from("workouts")
+    .from("workout_logs") // 🔥 AQUI FOI CORRIGIDO
     .insert(row)
     .select()
     .single();
@@ -28,7 +28,7 @@ export async function listWorkouts(userId: string) {
   const supabase = await createClient();
 
   const { data, error } = await (supabase as any)
-    .from("workouts")
+    .from("workout_logs") // 🔥 AQUI TAMBÉM
     .select("*")
     .eq("user_id", userId)
     .order("date", { ascending: false });
