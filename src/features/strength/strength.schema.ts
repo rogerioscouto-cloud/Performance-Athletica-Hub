@@ -38,3 +38,4 @@ export const strengthSchema = z.object({
 });
 
 export type StrengthInput = z.infer<typeof strengthSchema>;
+export type StrengthFormValues = z.infer<typeof strengthSchema>;
